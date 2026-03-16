@@ -227,8 +227,8 @@ def main():
             log = json.load(f)
             # print(type(log)) # <class 'list'>
             for record in log:
-                if record['player_id'] != 'You':
-                    continue
+                # if record['player_id'] != 'You':
+                #     continue
                 
                 if record['action'] == 'pong':
                     pong_record.append(record)
