@@ -1,6 +1,5 @@
 import json
 import os 
-import datetime
 LOG_ROOT = 'raw_logs'
 PONG_ROOT = 'pong_logs'
 KONG_ROOT = 'kong_logs'
@@ -11,23 +10,23 @@ DISCARD_ROOT = 'discard_logs'
 # Feature encoding scheme:
 # - Wind: feature[:1]
 # - Round Position: feature[1:2]
-# - Hand: feature[2:36] (34 tiles)
-# - Self Pongs: feature[36:70] (34 tiles)
-# - Self Kongs: feature[70:104] (34 tiles)
-# - Self Chows: feature[104:125] (21 tiles)
-# - Op Pongs: feature[125:159] (34 tiles)
-# - Op Kongs: feature[159:193] (34 tiles)
-# - Op Chows: feature[193:214] (21 tiles)
-# - Next Pongs: feature[214:248] (34 tiles)
-# - Next Kongs: feature[248:282] (34 tiles)
-# - Next Chows: feature[282:303] (21 tiles)
-# - Prev Pongs: feature[303:337] (34 tiles)
-# - Prev Kongs: feature[337:371] (34 tiles)
-# - Prev Chows: feature[371:392] (21 tiles)
-# - Action tile: feature[392:426] (34 tiles)
-# - Discard Pool: feature[426:460] (34 tiles)
+# - Hand: feature[2:36] (34 types)
+# - Self Pongs: feature[36:70] (34 types)
+# - Self Kongs: feature[70:104] (34 types)
+# - Self Chows: feature[104:125] (21 types)
+# - Op Pongs: feature[125:159] (34 types)
+# - Op Kongs: feature[159:193] (34 types)
+# - Op Chows: feature[193:214] (21 types)
+# - Next Pongs: feature[214:248] (34 types)
+# - Next Kongs: feature[248:282] (34 types)
+# - Next Chows: feature[282:303] (21 types)
+# - Prev Pongs: feature[303:337] (34 types)
+# - Prev Kongs: feature[337:371] (34 types)
+# - Prev Chows: feature[371:392] (21 types)
+# - Action tile: feature[392:426] (34 types)
+# - Discard Pool: feature[426:460] (34 types)
 
-def encoding(record: dict,) -> list:
+def encoding(record: dict) -> list:
     features = [0] * 460
     
     # Format checking
@@ -63,6 +62,33 @@ def encoding(record: dict,) -> list:
         # Apply normalization
         features[2 + tile_id] += 1 / 4
     
+    chow_id_mapping = {
+        # 'm' chows
+        1: 0,
+        2: 1,
+        3: 2,
+        4: 3,
+        5: 4,
+        6: 5,
+        7: 6,
+        # 'p' chows
+        10: 7,
+        11: 8,
+        12: 9,
+        13: 10,
+        14: 11,
+        15: 12,
+        16: 13,
+        # 's' chows
+        19: 14,
+        20: 15,
+        21: 16,
+        22: 17,
+        23: 18,
+        24: 19,
+        25: 20,
+    }
+
     # Self call tuple encoding (assume all tuples are valid)
     for t in record['called_tuples']:
         # Check tuple type
@@ -77,9 +103,10 @@ def encoding(record: dict,) -> list:
             else:
                 # Chow case
                 t.sort()
-                idx = t[0] - 1
-                # Applly normalization
-                features[104 + idx] += 1 / 4
+                idx = chow_id_mapping.get(t[0], None)
+                if idx is not None:
+                    # Applly normalization
+                    features[104 + idx] += 1 / 4
 
     # Opposite side player call tuple encoding (assume all tuples are valid)
     for t in record['opposite_player_called_tuples']:
@@ -113,9 +140,10 @@ def encoding(record: dict,) -> list:
             else:
                 # Chow case
                 t.sort()
-                idx = t[0] - 1
-                # Apply normalization
-                features[282 + idx] += 1 / 4
+                idx = chow_id_mapping.get(t[0], None)
+                if idx is not None:
+                    # Apply normalization
+                    features[282 + idx] += 1 / 4
 
     # Previous side player call tuple encoding (assume all tuples are valid)
     for t in record['previous_player_called_tuples']:
@@ -131,9 +159,10 @@ def encoding(record: dict,) -> list:
             else:
                 # Chow case
                 t.sort()
-                idx = t[0] - 1
-                # Apply normalization
-                features[371 + idx] += 1 / 4
+                idx = chow_id_mapping.get(t[0], None)
+                if idx is not None:
+                    # Apply normalization
+                    features[371 + idx] += 1 / 4
 
     # Action tile encoding
     if record['action_tile']:
